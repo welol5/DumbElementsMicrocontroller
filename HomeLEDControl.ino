@@ -1,23 +1,39 @@
 #include <FastLED.h>
-#include <Arduino_JSON.h>
 #include <WiFi.h>
 
 const char* ssid     = "NETGEAR94";
 const char* password = "pinkskates674";
 
-const int NUM_LEDS = 121;
+const int NUM_LEDS = 600;
 const int DATA_PIN = 25;
 const int CLOCK_PIN = 13;
 
 
 WiFiServer server(80);
+TaskHandle_t animationsTask;
+TaskHandle_t serverTask;
 
 CRGB leds[NUM_LEDS];
+
+struct LEDCommand {
+  int ledStart;
+  int ledEnd;
+  int r;
+  int g;
+  int b;
+};
 
 void setup()
 {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);      // set the LED pin mode
+
+  //start LED control
+  FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
+  for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CRGB(0, 0, 0);
+  }
+  FastLED.show();
 
   delay(10);
 
@@ -37,15 +53,91 @@ void setup()
   Serial.println(WiFi.localIP());
   server.begin();
 
-  //start LED control
-  FastLED.addLeds<WS2812, DATA_PIN, GRB>(leds, NUM_LEDS);
-  for(int i = 0; i < NUM_LEDS; i++){
-    leds[i] = CRGB(0,0,0);
-  }
-  FastLED.show();
+
 }
 
-void loop() {
+void response(WiFiClient client, int code) {
+  //headers recived
+  client.println("HTTP/1.1 200 OK");
+  client.println("Content-type:text/html");
+  client.println();
+
+  // the content of the HTTP response follows the header:
+  client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on. This does not work<br>");
+  client.print("Click <a href=\"/L\">here</a> to turn the LED on pin 5 off.<br>");
+  client.println();
+}
+
+int executeCommands(WiFiClient client, int contentLength) {
+  String body = "";
+  for (int i = 0; i < contentLength; i++) {
+    body += (char)client.read();
+  }
+  if (contentLength != 0) {
+    contentLength = 0;
+    //    Serial.println(body);
+
+    int lineCount = 0;
+    int lastFoundIndex = 0;
+    while (body.indexOf('\n', lastFoundIndex) != -1) {
+      lineCount++;
+      lastFoundIndex = body.indexOf('\n', lastFoundIndex) + 1;
+    }
+    lineCount++;//last line
+    if (lineCount % 4 != 0) {
+      Serial.println("Line count wrong");
+      //      return NULL;
+    } else {
+      String lines[lineCount];
+      lastFoundIndex = 0;
+      for (int i = 0; i < lineCount; i++) {
+        if (i == lineCount - 1) {
+          lines[i] = body.substring(lastFoundIndex);
+        } else {
+          lines[i] = body.substring(lastFoundIndex, body.indexOf('\n', lastFoundIndex));
+          lastFoundIndex = body.indexOf('\n', lastFoundIndex) + 1;
+        }
+      }
+      int commandCount  = lineCount / 4;
+      LEDCommand cmds[commandCount];
+      int split;
+      for (int i = 0; i < commandCount; i ++) {
+        split = lines[(i*4)].indexOf('-');
+        int ledStart = lines[(i*4)].substring(5, split).toInt();
+        int ledEnd = lines[(i*4)].substring(split + 1).toInt();
+        int r = lines[(i*4) + 1].substring(2).toInt();
+        int g = lines[(i*4) + 2].substring(2).toInt();
+        int b = lines[(i*4) + 3].substring(2).toInt();
+
+        cmds[i] = {ledStart, ledEnd, r, g, b};
+      }
+
+    Serial.println("Commands executed:");
+      for (int c = 0; c < commandCount; c++) {
+        LEDCommand command = cmds[c];
+        Serial.print(c);
+        Serial.print(". ledStart: ");
+        Serial.print(command.ledStart);
+        Serial.print(", ledEnd: ");
+        Serial.print(command.ledEnd);
+        Serial.print(", r: ");
+        Serial.print(command.r, HEX);
+        Serial.print(", g: ");
+        Serial.print(command.g, HEX);
+        Serial.print(", b: ");
+        Serial.println(command.b, HEX);
+        for (int i = command.ledStart; i <= command.ledEnd; i++) {
+          leds[i] = CRGB(command.r, command.g, command.b);
+        }
+      }
+      FastLED.show();
+      Serial.println("LEDs should be showing");
+      return lineCount / 4;
+    }
+  }
+}
+
+void runServer() {
   WiFiClient client = server.available();
 
   if (client) {
@@ -59,9 +151,7 @@ void loop() {
         Serial.write(c);
         if (c == '\n') {
           if (currentLine.length() == 0) {
-            JSONVar command = readBody(client, contentLength);
-            Serial.println(command);
-            executeCommand(command);
+            int result = executeCommands(client, contentLength);
             response(client, 200);
             break;//disconnect from client, interaction finished
           } else {
@@ -84,74 +174,8 @@ void loop() {
     client.stop();
     Serial.println("Client Disconnected.");
   }
-
 }
 
-void response(WiFiClient client, int code) {
-  //headers recived
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-type:text/html");
-  client.println();
-
-  // the content of the HTTP response follows the header:
-  client.print("Click <a href=\"/H\">here</a> to turn the LED on pin 5 on. This does not work<br>");
-  client.print("Click <a href=\"/L\">here</a> to turn the LED on pin 5 off.<br>");
-  client.println();
-}
-
-JSONVar readBody(WiFiClient client, int contentLength) {
-  String body = "";
-  for (int i = 0; i < contentLength; i++) {
-    body += (char)client.read();
-  }
-  if (contentLength != 0) {
-    contentLength = 0;
-    Serial.println(body);
-    JSONVar command = JSON.parse(body);
-    if (JSON.typeof(command) == "undefined") {
-      Serial.println("Parsing input failed!");
-      return NULL;
-    } else {
-      Serial.println("parse success");
-    }
-    return command;
-  }
-}
-
-void executeCommand(JSONVar command) {
-  Serial.println("execute");
-  int ledStart = 0;
-  int ledEnd = NUM_LEDS;
-  int r = 0;
-  int g = 0;
-  int b = 0;
-
-  //parse JSON
-  if(command.hasOwnProperty("ledStart")){
-    ledStart = (int)command["ledStart"];
-  }
-  if(command.hasOwnProperty("ledEnd")){
-    ledEnd = (int)command["ledEnd"];
-  }
-  if(command.hasOwnProperty("r")){
-    r = (int)command["r"];
-  }
-  if(command.hasOwnProperty("g")){
-    g = (int)command["g"];
-  }
-  if(command.hasOwnProperty("b")){
-    b = (int)command["b"];
-  }
-
-  Serial.println(ledStart);
-  Serial.println(ledEnd);
-  Serial.println(r);
-  Serial.println(g);
-  Serial.println(b);
-
-  for(int i = ledStart; i < ledEnd && i < NUM_LEDS; i++){
-    leds[i] = CRGB(r,g,b);
-  }
-  FastLED.show();
-  Serial.println("LEDs should be showing");
+void loop() {
+  runServer();
 }
