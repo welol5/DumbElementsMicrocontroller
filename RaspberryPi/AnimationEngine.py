@@ -17,8 +17,8 @@ class AnimationEngine(threading.Thread):
         if (self.animation != None):
             self.animation(self.leds, self.ledCount)
 
-    def stop(self):
-        self._stop_event.set()
+    def stopAnimation(self):
+        self.stop = 1
 
     def setAnimation(self, name, leds, ledCount):
         if(name == "stars"):
@@ -30,11 +30,10 @@ class AnimationEngine(threading.Thread):
         chance = 0.005
         colors = [(0,0,0)]*ledCount
         leds_on = [0]*ledCount
-        print(leds[0])
 
-        stop = 0
-        while stop == 0:
-            time.sleep(0.1)
+        self.stop = 0
+        while self.stop == 0:
+            time.sleep(0.2)
             #set colors
             for i in range(ledCount):
                 leds[i] = colors[i]

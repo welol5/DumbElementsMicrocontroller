@@ -14,9 +14,15 @@ ledCount = 450
 leds = neopixel.NeoPixel(board.D18, ledCount, auto_write=False)
 leds.fill((0, 0, 0))
 leds.show()
+
 animationThread = None
 
+
 class LEDServer(BaseHTTPRequestHandler):
+
+    def __init__(self, request, client_address, server) -> None:
+        super().__init__(request, client_address, server)
+
     def do_GET(self):
         self.send_response(200)
         self.send_header("Content-type", "text/html")
@@ -27,12 +33,26 @@ class LEDServer(BaseHTTPRequestHandler):
         if(self.path == '/led'):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
-            print(json.dumps(body, indent=4))
             self.update_leds(body)
-        elif(self.path == '/led/namedanimation'):
-            animationThread = AnimationEngine()
-            animationThread.setAnimation("stars", leds, ledCount)
-            animationThread.start()
+        elif(self.path == '/led/animation'):
+            contentLength = int(self.headers.get('Content-Length'))
+            body = json.loads(self.rfile.read(contentLength))
+            global animationThread
+            if(body['stopAnimation'] == 'true'):
+                if(animationThread is not None):
+                    animationThread.stopAnimation()
+                    animationThread.join()
+            elif(body["namedAnimation"] is not None):
+                animationThread = AnimationEngine()
+                animationThread.setAnimation(body["namedAnimation"], leds, ledCount)
+                animationThread.start()
+        elif(self.path == '/led/off'):
+            if(animationThread is not None):
+                animationThread.stopAnimation()
+                animationThread.join()
+            for i in range(0, ledCount):
+                leds[i] = (0,0,0)
+            leds.show()
 
         self.send_response(200)
         self.end_headers()
