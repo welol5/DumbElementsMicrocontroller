@@ -33,10 +33,12 @@ class LEDServer(BaseHTTPRequestHandler):
         if(self.path == '/led'):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
+            print(body)
             self.update_leds(body)
         elif(self.path == '/led/animation'):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
+            print(body)
             global animationThread
             if(body['stopAnimation'] == 'true'):
                 if(animationThread is not None):
