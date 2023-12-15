@@ -20,16 +20,14 @@ leds.show()
 animationThread = None
 
 daily_restart = True
-now = datetime.now()
+now = datetime.datetime.now()
 #4am tomorrow
-restart_time = datetime.date(now.year,now.month,now.day+1,4,0,0)
-restart_delay = restart_time-datetime.now()
-if daily_restart:
-    threading.Thread(target=restart_pi)
+restart_time = datetime.datetime(now.year,now.month,now.day+1,4,0,0)
+restart_delay = restart_time-now
+print("Time in seconds till reboot: ", end="")
+print(restart_delay.total_seconds())
 
-def restart_pi():
-    time.sleep(restart_delay.total_seconds)
-    subprocess.Popen("sudo reboot", shell=True)
+
 
 
 class LEDServer(BaseHTTPRequestHandler):
@@ -84,10 +82,17 @@ class LEDServer(BaseHTTPRequestHandler):
         leds.show()
         print(command)
 
+def restart_pi():
+    time.sleep(restart_delay.total_seconds)
+    subprocess.Popen("sudo reboot", shell=True)
+
 if __name__ == "__main__":
     webServer = HTTPServer((host, port), LEDServer)
     print("Server started at: " + host + ":", end="")
     print(port)
+
+    if daily_restart:
+        threading.Thread(target=restart_pi)
 
     try:
         webServer.serve_forever()
