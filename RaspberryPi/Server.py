@@ -47,15 +47,15 @@ class LEDServer(BaseHTTPRequestHandler):
 
     def do_POST(self):
         logging.info("POST " + self.path + " from: " + self.client_address[0] + " : " + str(self.client_address[1]))
-        logging.info(body)
         if(self.path == '/led'):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
-            print(body)
+            logging.info(body)
             self.update_leds(body)
         elif(self.path == '/led/animation'):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
+            logging.info(body)
             global animationThread
             if(body['stopAnimation'] == 'true' or body['stopAnimation'] == True):
                 logging.info("Stopping animation")
