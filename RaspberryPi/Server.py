@@ -53,15 +53,18 @@ class LEDServer(BaseHTTPRequestHandler):
             print(body)
             self.update_leds(body)
         elif(self.path == '/led/animation'):
+            logging.info("Animation update")
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
-            print(body)
             global animationThread
             if(body['stopAnimation'] == 'true'):
+                logging.info("Stopping animation")
                 if(animationThread is not None):
                     animationThread.stopAnimation()
-                    animationThread.join()
+                    # animation will fade out
+                    # animationThread.join()
             elif(body["namedAnimation"] is not None):
+                logging.info("Starting animation: " + body["namedAnimation"])
                 if animationThread is not None:
                     animationThread.stopAnimation()
                     animationThread.join()
@@ -69,8 +72,9 @@ class LEDServer(BaseHTTPRequestHandler):
                 animationThread.setAnimation(body["namedAnimation"], leds, ledCount)
                 animationThread.start()
         elif(self.path == '/led/off'):
+            logging.info("Shutting off LEDs")
             if(animationThread is not None):
-                animationThread.stopAnimation()
+                animationThread.hardStopAnimation()
                 animationThread.join()
             for i in range(0, ledCount):
                 leds[i] = (0,0,0)
