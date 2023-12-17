@@ -6,8 +6,11 @@ import board
 import neopixel
 import threading
 import subprocess
+import logging
 
 from AnimationEngine import AnimationEngine
+
+logging.basicConfig(filename='server.log', encoding='utf-8', level=logging.INFO)
 
 host = "0.0.0.0"
 port = 8081
@@ -36,12 +39,14 @@ class LEDServer(BaseHTTPRequestHandler):
         super().__init__(request, client_address, server)
 
     def do_GET(self):
+        logging.info("GET " + self.path + " from: " + self.client_address[0] + " : " + str(self.client_address[1]))
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
         self.wfile.write(bytes("""{"ledCount":"450", "ledAddressible":"true", "ledAnimations":"true"}""", "utf-8"))
 
     def do_POST(self):
+        logging.info("POST " + self.path + " from: " + self.client_address[0] + " : " + str(self.client_address[1]))
         if(self.path == '/led'):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
