@@ -7,6 +7,7 @@ import neopixel
 import threading
 import subprocess
 import logging
+import tracemalloc
 
 from AnimationEngine import AnimationEngine
 
@@ -25,13 +26,14 @@ animationThread = None
 daily_restart = True
 now = datetime.datetime.now()
 #4am tomorrow
-restart_time = datetime.datetime(now.year,now.month,now.day+1,4,0,0)
+restart_time = datetime.datetime(now.year,now.month,now.day,4,0,0) + datetime.timedelta(1)
 restart_delay = restart_time-now
 print("Time in seconds till reboot: ", end="")
 print(restart_delay.total_seconds())
 
-
-
+system_status_logging = True
+system_status_delay_between_logging = 3600
+tracemalloc.start()
 
 class LEDServer(BaseHTTPRequestHandler):
 
@@ -92,8 +94,16 @@ class LEDServer(BaseHTTPRequestHandler):
         print(command)
 
 def restart_pi():
-    time.sleep(restart_delay.total_seconds)
+    time.sleep(restart_delay.total_seconds())
     subprocess.Popen("sudo reboot", shell=True)
+
+def system_status_logging():
+    while True:
+        logging.info("start system status log")
+        logging.info("Memory being used: ")
+        logging.info(tracemalloc.get_traced_memory())
+        logging.info("End system status log")
+        time.sleep(system_status_delay_between_logging)
 
 if __name__ == "__main__":
     webServer = HTTPServer((host, port), LEDServer)
@@ -101,7 +111,12 @@ if __name__ == "__main__":
     print(port)
 
     if daily_restart:
-        threading.Thread(target=restart_pi)
+        restart_thread = threading.Thread(target=restart_pi)
+        restart_thread.start()
+
+    if system_status_logging:
+        system_status_logging_thread = threading.Thread(target=system_status_logging)
+        system_status_logging_thread.start();
 
     try:
         webServer.serve_forever()
