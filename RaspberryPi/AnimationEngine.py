@@ -1,90 +1,63 @@
-import colorsys
-import random
 import threading
-import time
 import logging
+import time
+
+from animations.animation import Animation
+from animations.stars import StarsAnimation
+
+from filters.filter import Filter
+from filters.fade import FadeFilter
 
 logging.basicConfig(filename='server.log', encoding='utf-8', level=logging.INFO)
 
 class AnimationEngine(threading.Thread):
 
-    stop = 0
-    hardStop = 0
-    animation = None
-    leds = None
-    ledCount = None
-    animationDelay = 0.2
-    stopFadeDelay = 0.01
+    stop = False
 
-    def __init__(self):
+    leds = None
+    led_count = None
+    animation_delay = None
+
+    animation: Animation = None
+
+    standard_fade_rate = 0.0001
+
+    def __init__(self, leds, led_count, animation_name, animation_delay=0.4):
         threading.Thread.__init__(self)
+        self.leds = leds
+        self.led_count = led_count
+        self.animation_delay = animation_delay
+        self.setup_animation(animation_name)
 
     def run(self):
-        if (self.animation != None):
-            self.animation(self.leds, self.ledCount)
+        while(not self.stop):
+            self.update_leds()
+            time.sleep(self.animation_delay)
+
+        colors = self.animation.get_current_state()
+        fade = FadeFilter(fade_rate=self.standard_fade_rate)
+
+        for i in range (0,int(1.0/self.standard_fade_rate),1):
+            current_colors = fade.apply_filter(colors)
+            #update led colors
+            for k in range(self.led_count):
+                self.leds[k] = current_colors[k]
+            self.leds.show()
 
     def stopAnimation(self):
-        self.stop = 1
+        self.stop = True
 
-    def hardStopAnimation(self):
-        self.stop = 1
-        hardStop = 1
+    def setup_animation(self, animation_name):
+        if(animation_name == "stars"):
+            self.animation = StarsAnimation(self.led_count)
 
-    def setAnimation(self, name, leds, ledCount):
-        if(name == "stars"):
-            self.animation = self.stars
-            self.leds = leds
-            self.ledCount = ledCount
+    def update_leds(self):
+        #get base colors
+        colors = self.animation.get_next_animation_frame()
 
-    def stars(self, leds, ledCount):
-        chance = 0.005
-        colors = [(0,0,0)]*ledCount
-        leds_on = [0]*ledCount
+        #apply filters
 
-        self.stop = 0
-        self.hardStop = 0
-        while self.stop == 0:
-            time.sleep(self.animationDelay)
-            #set colors
-            for i in range(ledCount):
-                leds[i] = colors[i]
-                
-                #add new stars
-                if leds_on[i] == 0:
-                    if random.random() < chance:
-                        leds_on[i] = 1
-                        colors[i] = (random.random()*256,random.random()*128,random.random()*256)
-
-                #fade old stars
-                else:
-                    hls = colorsys.rgb_to_hls(colors[i][0],colors[i][1],colors[i][2])
-                    new_hls = (hls[0], hls[1]-1, hls[2])
-                    if new_hls[1] <= 0:
-                        colors[i] = (0,0,0)
-                        leds_on[i] = 0
-                    else:
-                        colors[i] = colorsys.hls_to_rgb(new_hls[0],new_hls[1],new_hls[2])
-            leds.show()
-
-        if(self.hardStop == 0):
-            self.fade(leds, ledCount, colors)
-        else:
-            for i in range(ledCount):
-                leds[i] = (0,0,0)
-            leds.show()
-        
-    
-    def fade(self, leds, ledCount, colors):
-        logging.info("Fading LEDs")
-        for k in range(256):
-            time.sleep(self.stopFadeDelay)
-            for i in range(ledCount):
-                hls = colorsys.rgb_to_hls(colors[i][0],colors[i][1],colors[i][2])
-                new_hls = (hls[0], hls[1]-1, hls[2])
-                if new_hls[1] <= 0:
-                    colors[i] = (0,0,0)
-                else:
-                    colors[i] = colorsys.hls_to_rgb(new_hls[0],new_hls[1],new_hls[2])
-                leds[i] = colors[i]
-            leds.show()
-                
+        #update led colors
+        for i in range(self.led_count):
+            self.leds[i] = colors[i]
+        self.leds.show()
