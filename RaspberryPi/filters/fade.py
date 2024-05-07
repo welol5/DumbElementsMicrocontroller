@@ -13,13 +13,13 @@ class FadeFilter(Filter):
     def apply_filter(self, colors:list[tuple]) -> list[tuple]:
             
         self.fade_percent += self.fade_rate
+        fade_amount = numpy.interp(self.fade_percent, [0,1], [0,255])
+
         if(self.fade_percent > 1):
             self.fade_percent = 1
 
         for i in range(len(colors)): 
             hls = colorsys.rgb_to_hls(colors[i][0],colors[i][1],colors[i][2])
-
-            fade_amount = numpy.interp(self.fade_percent, [0,1], [0,255])
             new_hls = (hls[0], hls[1]-fade_amount, hls[2])
             if new_hls[1] <= 0:
                 colors[i] = (0,0,0)

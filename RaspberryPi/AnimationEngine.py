@@ -1,6 +1,7 @@
 import threading
 import logging
 import time
+import copy
 
 from animations.animation import Animation
 from animations.stars import StarsAnimation
@@ -20,7 +21,8 @@ class AnimationEngine(threading.Thread):
 
     animation: Animation = None
 
-    standard_fade_rate = 0.0001
+    #fade over 1 min
+    standard_fade_rate = 1.0/60.0
 
     def __init__(self, leds, led_count, animation_name, animation_delay=0.4):
         threading.Thread.__init__(self)
@@ -38,10 +40,10 @@ class AnimationEngine(threading.Thread):
         fade = FadeFilter(fade_rate=self.standard_fade_rate)
 
         for i in range (0,int(1.0/self.standard_fade_rate),1):
-            current_colors = fade.apply_filter(colors)
+            faded_colors = fade.apply_filter(copy.deepcopy(colors))
             #update led colors
             for k in range(self.led_count):
-                self.leds[k] = current_colors[k]
+                self.leds[k] = faded_colors[k]
             self.leds.show()
 
     def stopAnimation(self):
