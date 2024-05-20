@@ -8,6 +8,8 @@ import threading
 import subprocess
 import logging
 import tracemalloc
+import threading
+import copy
 
 from AnimationEngine import AnimationEngine
 
@@ -59,7 +61,9 @@ class LEDServer(BaseHTTPRequestHandler):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
             logging.info(body)
-            self.update_leds(body)
+            thread = threading.Thread(group=None, target=self.basic_led_update, args=([body]))
+            thread.start()
+            self.send_response(200)
 
         elif(self.path == '/led/animation'):
             contentLength = int(self.headers.get('Content-Length'))
@@ -71,19 +75,31 @@ class LEDServer(BaseHTTPRequestHandler):
                 if animation_thread is not None:
                     animation_thread.stopAnimation()
                     animation_thread.join()
-                animation_thread = AnimationEngine(leds, ledCount, body["namedAnimation"])
+                    animation_thread = None
+                animation_thread = AnimationEngine(leds, ledCount, animation_name=body["namedAnimation"], command=body["command"])
                 animation_thread.start()
 
         elif(self.path == '/led/off'):
             logging.info("Shutting off LEDs")
             if(animation_thread is not None):
                 animation_thread.stopAnimation()
+                animation_thread.join()
+                animation_thread = None
 
         self.send_response(200)
         self.end_headers()
         self.wfile.write(bytes("""{"ledCount":"450", "ledAddressible":"true", "ledAnimations":"true"}""", "utf-8"))
 
+    def basic_led_update(self, body):
+        logging.info(body)
+        global animation_thread
+        if(animation_thread is not None):
+            animation_thread.stopAnimation()
+            animation_thread.join()
+        self.update_leds(body)
+
     def update_leds(self, command):
+        print(command)
         for status in command["status"]:
             for i in range(status["ledStart"], status["ledEnd"]):
                 leds[i] = (status["r"],status["g"],status["b"])
@@ -113,7 +129,7 @@ if __name__ == "__main__":
 
     if system_status_logging_toggle:
         system_status_logging_thread = threading.Thread(target=system_status_logging)
-        system_status_logging_thread.start();
+        system_status_logging_thread.start()
 
     try:
         webServer.serve_forever()

@@ -5,6 +5,7 @@ import copy
 
 from animations.animation import Animation
 from animations.stars import StarsAnimation
+from animations.static import StaticAnimation
 
 from filters.filter import Filter
 from filters.fade import FadeFilter
@@ -20,36 +21,54 @@ class AnimationEngine(threading.Thread):
     animation_delay = None
 
     animation: Animation = None
+    is_static = False
 
     #fade over 1 min
     standard_fade_rate = 1.0/60.0
 
-    def __init__(self, leds, led_count, animation_name, animation_delay=0.4):
+    def __init__(self, leds, led_count, animation_name, animation_delay=0.4, command = None):
         threading.Thread.__init__(self)
         self.leds = leds
         self.led_count = led_count
         self.animation_delay = animation_delay
-        self.setup_animation(animation_name)
+        self.setup_animation(animation_name, command)
 
     def run(self):
-        while(not self.stop):
+
+        if(self.is_static):
             self.update_leds()
-            time.sleep(self.animation_delay)
+        else:
+            while(not self.stop):
+                self.update_leds()
+                time.sleep(self.animation_delay)
 
-        colors = self.animation.get_current_state()
-        fade = FadeFilter(fade_rate=self.standard_fade_rate)
+            colors = self.animation.get_current_state()
+            fade = FadeFilter(fade_rate=self.standard_fade_rate)
 
-        for i in range (0,int(1.0/self.standard_fade_rate),1):
-            faded_colors = fade.apply_filter(copy.deepcopy(colors))
-            #update led colors
-            for k in range(self.led_count):
-                self.leds[k] = faded_colors[k]
-            self.leds.show()
+            for i in range (0,int(1.0/self.standard_fade_rate),1):
+                faded_colors = fade.apply_filter(copy.deepcopy(colors))
+                #update led colors
+                for k in range(self.led_count):
+                    self.leds[k] = faded_colors[k]
+                self.leds.show()
 
     def stopAnimation(self):
         self.stop = True
 
-    def setup_animation(self, animation_name):
+        if(self.is_static):
+            colors = self.animation.get_current_state()
+            fade = FadeFilter(fade_rate=self.standard_fade_rate)
+            for i in range (0,int(1.0/self.standard_fade_rate),1):
+                faded_colors = fade.apply_filter(copy.deepcopy(colors))
+                #update led colors
+                for k in range(self.led_count):
+                    self.leds[k] = faded_colors[k]
+                self.leds.show()
+
+    def setup_animation(self, animation_name, command = None):
+        if(animation_name == "static"):
+            self.animation = StaticAnimation(self.led_count, command)
+            self.is_static = True
         if(animation_name == "stars"):
             self.animation = StarsAnimation(self.led_count)
 
