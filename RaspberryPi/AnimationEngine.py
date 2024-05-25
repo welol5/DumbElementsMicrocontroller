@@ -6,6 +6,7 @@ import copy
 from animations.animation import Animation
 from animations.stars import StarsAnimation
 from animations.static import StaticAnimation
+from animations.fireflies import FirefliesAnimation
 
 from filters.filter import Filter
 from filters.fade import FadeFilter
@@ -71,6 +72,8 @@ class AnimationEngine(threading.Thread):
             self.is_static = True
         if(animation_name == "stars"):
             self.animation = StarsAnimation(self.led_count)
+        if(animation_name == "fireflies"):
+            self.animation = FirefliesAnimation(self.led_count)
 
     def update_leds(self):
         #get base colors
