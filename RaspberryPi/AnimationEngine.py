@@ -27,6 +27,9 @@ class AnimationEngine(threading.Thread):
     #fade over 1 min
     standard_fade_rate = 1.0/60.0
 
+    basic_animations = {"stars": StarsAnimation,
+                     "fireflies": FirefliesAnimation}
+
     def __init__(self, leds, led_count, animation_name, animation_delay=0.4, command = None):
         threading.Thread.__init__(self)
         self.leds = leds
@@ -70,10 +73,9 @@ class AnimationEngine(threading.Thread):
         if(animation_name == "static"):
             self.animation = StaticAnimation(self.led_count, command)
             self.is_static = True
-        if(animation_name == "stars"):
-            self.animation = StarsAnimation(self.led_count)
-        if(animation_name == "fireflies"):
-            self.animation = FirefliesAnimation(self.led_count)
+        else:
+            self.animation = self.basic_animations[animation_name](self.led_count)
+            self.is_static = False
 
     def update_leds(self):
         #get base colors
