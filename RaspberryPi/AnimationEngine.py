@@ -1,3 +1,4 @@
+import random
 import threading
 import logging
 import time
@@ -74,6 +75,10 @@ class AnimationEngine(threading.Thread):
         if(animation_name == "static"):
             self.animation = StaticAnimation(self.led_count, command)
             self.is_static = True
+        elif(animation_name == "random"):
+            random_index = int(random.random()*len(self.basic_animations))
+            self.animation = list(self.basic_animations.values())[random_index](self.led_count)
+            self.is_static = False
         else:
             self.animation = self.basic_animations[animation_name](self.led_count)
             self.is_static = False

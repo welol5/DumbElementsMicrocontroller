@@ -19,6 +19,8 @@ class FadeFilter(Filter):
             self.fade_percent = 1
 
         for i in range(len(colors)): 
+            if(colors[i] == (0,0,0)):
+                continue
             hls = colorsys.rgb_to_hls(colors[i][0],colors[i][1],colors[i][2])
             new_hls = (hls[0], hls[1]-fade_amount, hls[2])
             if new_hls[1] <= 0:
