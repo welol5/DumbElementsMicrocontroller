@@ -1,0 +1,10 @@
+{
+    "server": {
+        "port":8081
+    },
+    "leds": {
+        "ledCount": 450,
+        "addressible": "true",
+        "hasAnimations": "true"
+    }
+}

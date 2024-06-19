@@ -21,8 +21,19 @@ logging.basicConfig(filename='server.log',
                     encoding='utf-8')
 logging.getLogger().handlers[0].setFormatter(formatter)
 
+#load server config
+import os
+cwd = os.getcwd()
+logging.info(cwd)
+config = None
+with open('/home/pi/RaspberryPi/config.json', 'r') as file:
+    data = file.read().rstrip()
+    config =  json.loads(data)
+
+print(config)
+
 host = "0.0.0.0"
-port = 8081
+port = config['server']['port']
 
 ledCount = 450
 leds = neopixel.NeoPixel(board.D18, ledCount, auto_write=False)
@@ -50,10 +61,16 @@ class LEDServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         logging.info("GET " + self.path + " from: " + self.client_address[0] + " : " + str(self.client_address[1]))
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        self.wfile.write(bytes("""{"ledCount":"450", "ledAddressible":"true", "ledAnimations":"true"}""", "utf-8"))
+        if(self.path == '/led/animation'):
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(bytes(json.dumps(AnimationEngine.basic_animations.keys()), "utf-8"))
+        else:
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(bytes("""{"ledCount":"450", "ledAddressible":"true", "ledAnimations":"true"}""", "utf-8"))
 
     def do_POST(self):
         logging.info("POST " + self.path + " from: " + self.client_address[0] + " : " + str(self.client_address[1]))
