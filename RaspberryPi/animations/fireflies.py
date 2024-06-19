@@ -11,8 +11,9 @@ class FirefliesAnimation(Animation):
     colors = None
     target_colors = None
     leds_on = None
+    led = None
 
-    def __init__(self, led_count, chance=0.0025):
+    def __init__(self, led_count, chance=0.00125):
         self.led_count = led_count
         self.colors = [(0,0,0)]*led_count
         self.target_colors = [(0,0,0)]*led_count
@@ -24,12 +25,13 @@ class FirefliesAnimation(Animation):
             
         for i in range(self.led_count): 
             #add new fireflies
-            if self.leds_fade_on[i] == 0 & self.leds_fade_off[i] == 0:
+            if self.leds_fade_on[i] == 0 and self.leds_fade_off[i] == 0:
                 if random.random() < self.chance:
                     self.leds_fade_on[i] = 1
-                    self.target_colors[i] = colorsys.hsv_to_rgb(((random.random()*0.1)+0.02),1,1)
-                    print(self.target_colors[i])
+                    self.target_colors[i] = colorsys.hsv_to_rgb(((random.random()*0.08)+0.02),1,1)
                     self.target_colors[i] = (self.target_colors[i][0] * 255,self.target_colors[i][1] * 255,self.target_colors[i][2] * 255)
+                    if(self.led == None):
+                        self.led = i
 
             #fade on new fireflies
             elif self.leds_fade_on[i] > 0:
@@ -43,6 +45,8 @@ class FirefliesAnimation(Animation):
             elif self.leds_fade_off[i] == 1:
                 hls = colorsys.rgb_to_hls(self.colors[i][0],self.colors[i][1],self.colors[i][2])
                 new_hls = (hls[0], hls[1]-1, hls[2])
+                if(i == 1):
+                    print(new_hls)
                 if new_hls[1] <= 0:
                     self.colors[i] = (0,0,0)
                     self.leds_fade_off[i] = 0
