@@ -27,6 +27,7 @@ class AnimationEngine(threading.Thread):
     #fade over 1 min
     standard_fade_rate = 1.0/60.0
 
+    #basic animations only need to know the led count
     basic_animations = {"stars": StarsAnimation,
                      "fireflies": FirefliesAnimation}
 

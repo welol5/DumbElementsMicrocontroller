@@ -23,11 +23,12 @@ class FirefliesAnimation(Animation):
     def get_next_animation_frame(self) -> list[tuple]:
             
         for i in range(self.led_count): 
-            #add new stars
+            #add new fireflies
             if self.leds_fade_on[i] == 0 & self.leds_fade_off[i] == 0:
                 if random.random() < self.chance:
                     self.leds_fade_on[i] = 1
-                    self.target_colors[i] = colorsys.hsv_to_rgb((random.random()*45),1,1)
+                    self.target_colors[i] = colorsys.hsv_to_rgb(((random.random()*0.1)+0.02),1,1)
+                    print(self.target_colors[i])
                     self.target_colors[i] = (self.target_colors[i][0] * 255,self.target_colors[i][1] * 255,self.target_colors[i][2] * 255)
 
             #fade on new fireflies
