@@ -74,6 +74,7 @@ class LEDServer(BaseHTTPRequestHandler):
 
     def do_POST(self):
         logging.info("POST " + self.path + " from: " + self.client_address[0] + " : " + str(self.client_address[1]))
+        statusCode = 200
         if(self.path == '/led'):
             contentLength = int(self.headers.get('Content-Length'))
             body = json.loads(self.rfile.read(contentLength))
@@ -100,10 +101,11 @@ class LEDServer(BaseHTTPRequestHandler):
             logging.info("Shutting off LEDs")
             if(animation_thread is not None):
                 animation_thread.stopAnimation()
-                animation_thread.join()
+                # animation_thread.join()
                 animation_thread = None
+                statusCode = 202
 
-        self.send_response(200)
+        self.send_response(statusCode)
         self.end_headers()
         self.wfile.write(bytes("""{"ledCount":"450", "ledAddressible":"true", "ledAnimations":"true"}""", "utf-8"))
 
